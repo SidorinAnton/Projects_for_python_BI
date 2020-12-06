@@ -1,6 +1,6 @@
 # Created by Anton Sidorin (github - SidorinAnton),
-# Anna Churkina (github - AnyaChurkina), Margarita Komarova (github - Rita1612-GitHub)
-
+# Anna Churkina (github - AnyaChurkina)
+# and Margarita Komarova (github - Rita1612-GitHub)
 
 import sys
 import os
@@ -19,6 +19,8 @@ def calculate_gc_content(input_read: list, value: list) -> str:
 
     if len(value) == 2:
         upper_value = value[1]
+        if lower_value > upper_value:
+            lower_value, upper_value = upper_value, lower_value
     else:
         upper_value = None
 
@@ -33,18 +35,33 @@ def calculate_gc_content(input_read: list, value: list) -> str:
 
 def filter_the_reads(current_read: list, min_len: float, gc_content: list, failed=False) -> str:
     """
-    :param current_read:
-    :param min_len:
-    :param gc_content:
-    :param failed:
-    :return:
+    Filter_fastq v1.0.0
+
+    Usage:
+        python3 filter_fastq.py [options] <input.fastq>
+
+
+    Available options:
+    --min_length <int> - minimal length of the sequence read to pass (Default = 0).
+
+    --keep_filtered - this flag should be set to save the not passed (failed the conditions) reads.
+
+    --gc_bounds <min> <max> - range of the GC bases percentage in a read. Use one value to specify only lower bound.
+                Use two values to specify lower and upper bounds (Default = 0).
+
+    --output_base_name <str> - the basename of the output files (By default writes the base name of input
+                without '.fastq')
+
+
+    Output files:
+        output_base_name__passed.fastq
+        output_base_name__failed.fastq (if 'keep_filtered' is defined)
     """
 
     if sequence_len(current_read, min_len) == "pass" and calculate_gc_content(current_read, gc_content) == "pass":
         output_passed.write("\n".join(current_read))
         output_passed.write("\n")
         return "passed"
-
     else:
         if failed:
             output_failed.write("\n".join(current_read))
@@ -54,17 +71,20 @@ def filter_the_reads(current_read: list, min_len: float, gc_content: list, faile
 
 if __name__ == "__main__":
 
-    print("Use '--help' to see ....")
     input_arguments = sys.argv
+    arguments = dict()
+
+    if len(input_arguments) == 1:
+        print("Use '--help' to see the available options")
+        exit()
 
     if "--help" in input_arguments:
         print(filter_the_reads.__doc__)
+        exit()
 
-    start_time = time.time()
+    # Initialization of arguments
 
-    file_with_reads = input_arguments.pop()
-    arguments = dict()
-
+    # Another way of initialization
     # for val in input_arguments[1:]:
     #     # Works bad, if something is wrong with arguments (input errors)
     #     if val.startswith("--"):
@@ -73,38 +93,39 @@ if __name__ == "__main__":
     #     else:
     #         arguments[current_arg].append(val)
 
-    if "--min_length" not in input_arguments:
-        raise NameError("Argument '--min_length' should be defined")
+    if input_arguments[-1].endswith(".fastq"):
+        file_with_reads = input_arguments.pop()
     else:
-        value_of_min_len = input_arguments[input_arguments.index("--min_length") + 1]
-        arguments["min_length"] = float(value_of_min_len)
+        raise FileNotFoundError("Input '.fastq' file is not defined. Check the type of file extension")
 
-
-
+    if "--min_length" not in input_arguments:
+        arguments["min_length"] = 0.0
+        print("Parameter min_length - 0")
+    else:
+        arguments["min_length"] = float(input_arguments[input_arguments.index("--min_length") + 1])
+        print(f"Parameter min_length - {arguments['min_length']}")
 
     if "--gc_bounds" not in input_arguments:
-        arguments["gc_bounds"] = [0]  # GC content will be greater, than zero
+        arguments["gc_bounds"] = [0.0]
+        print("Parameter gc_bounds - 0")
     else:
         arguments["gc_bounds"] = []
-        index_of_gc_value = input_arguments.index("--gc_bounds")
-
-        for gc_val_index in range(index_of_gc_value + 1, len(input_arguments)):
+        for gc_val_index in range(input_arguments.index("--gc_bounds") + 1, len(input_arguments)):
             gc_value = input_arguments[gc_val_index]
             if gc_value.startswith("--"):
                 break
             else:
                 arguments["gc_bounds"].append(float(gc_value))
-
-
+        print(f"Parameter gc_bounds - {arguments['gc_bounds']}")
 
     if "--output_base_name" in input_arguments:
-        index_of_base_name = input_arguments.index("--output_base_name") + 1
-        base_name = input_arguments[index_of_base_name]
+        base_name = input_arguments[input_arguments.index("--output_base_name") + 1]
+        print(f"Parameter output_base_name - {base_name}")
     else:
         base_name = file_with_reads[:len(file_with_reads) - 6]
+        print(f"Parameter output_base_name - {base_name}")
 
-
-
+    # If output files with the same base name exist
     if os.path.exists(f"{base_name}__passed.fastq"):
         print(f"{base_name}__passed.fastq exists")
         print("Do you want to rewrite this file? [y/n]")
@@ -113,7 +134,6 @@ if __name__ == "__main__":
         else:
             print("Process finished")
             exit()
-
     if os.path.exists(f"{base_name}__failed.fastq"):
         print(f"{base_name}__failed.fastq exists")
         print("Do you want to rewrite this file? [y/n]")
@@ -123,21 +143,21 @@ if __name__ == "__main__":
             print("Process finished")
             exit()
 
-
-
+    # Main filtration
+    start_time = time.time()
     with open(file_with_reads, "r") as input_file, open(f"{base_name}__passed.fastq", "a") as output_passed:
         read = []
         counter_passed = 0
         counter_failed = 0
 
-        for smt in input_file:
+        for line in input_file:
             if len(read) != 3:
-                read.append(smt.rstrip())
+                read.append(line.rstrip())
                 continue
             else:
-                read.append(smt.rstrip())
-                # print("Processing read", read[0])
+                read.append(line.rstrip())
 
+                # Start of processing
                 if "--keep_filtered" in input_arguments:
                     with open(f"{base_name}__failed.fastq", "a") as output_failed:
                         status = filter_the_reads(read, arguments["min_length"], arguments["gc_bounds"], failed=True)
@@ -155,6 +175,13 @@ if __name__ == "__main__":
                         counter_failed += 1
 
             read = []
+
+    if os.path.exists(f"{base_name}__failed.fastq"):
+        print(f"Output files - {base_name}__passed.fastq and {base_name}__failed.fastq")
+    else:
+        print(f"Output file - {base_name}__passed.fastq")
+
+    # End of processing and base report of filtration
     number_of_reads = counter_passed + counter_failed
     end_time = time.time()
 
@@ -163,4 +190,3 @@ if __name__ == "__main__":
     print(f"{number_of_reads} reads filtered")
     print(f"{counter_passed} ({int(100 * counter_passed / number_of_reads)}%) pass filtration")
     print(f"{counter_failed} ({int(100 * counter_failed / number_of_reads)}%) fail filtration")
-
