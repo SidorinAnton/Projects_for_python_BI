@@ -1,22 +1,24 @@
+# Created by Anton Sidorin (github - SidorinAnton),
+# Anna Churkina (github - AnyaChurkina), Margarita Komarova (github - Rita1612-GitHub)
+
 
 import sys
-import os.path
+import os
 import time
 
 
-def sequence_len(input_read: list, value):
-    # print("In function length_of_the_sequence -", read)
+def sequence_len(input_read: list, value: float) -> str:
     sequence = input_read[1]
-    if len(sequence) >= float(value):
+    if len(sequence) >= value:
         return "pass"
 
 
-def calculate_gc_content(input_read: list, value: list):
+def calculate_gc_content(input_read: list, value: list) -> str:
     sequence = input_read[1]
-    lower_value = float(value[0])
+    lower_value = value[0]
 
     if len(value) == 2:
-        upper_value = float(value[1])
+        upper_value = value[1]
     else:
         upper_value = None
 
@@ -29,7 +31,15 @@ def calculate_gc_content(input_read: list, value: list):
             return "pass"
 
 
-def filter_the_reads(current_read: list, min_len, gc_content: list, failed=False):
+def filter_the_reads(current_read: list, min_len: float, gc_content: list, failed=False) -> str:
+    """
+    :param current_read:
+    :param min_len:
+    :param gc_content:
+    :param failed:
+    :return:
+    """
+
     if sequence_len(current_read, min_len) == "pass" and calculate_gc_content(current_read, gc_content) == "pass":
         output_passed.write("\n".join(current_read))
         output_passed.write("\n")
@@ -44,28 +54,52 @@ def filter_the_reads(current_read: list, min_len, gc_content: list, failed=False
 
 if __name__ == "__main__":
 
+    print("Use '--help' to see ....")
+    input_arguments = sys.argv
+
+    if "--help" in input_arguments:
+        print(filter_the_reads.__doc__)
+
     start_time = time.time()
 
-    input_arguments = sys.argv
     file_with_reads = input_arguments.pop()
     arguments = dict()
 
-    for val in input_arguments[1:]:
-        # Works bad, if something is wrong with arguments (input errors)
-        if val.startswith("--"):
-            arguments[val] = []
-            current_arg = val
-        else:
-            arguments[current_arg].append(val)
+    # for val in input_arguments[1:]:
+    #     # Works bad, if something is wrong with arguments (input errors)
+    #     if val.startswith("--"):
+    #         arguments[val] = []
+    #         current_arg = val
+    #     else:
+    #         arguments[current_arg].append(val)
 
-    if "--min_length" not in arguments:
+    if "--min_length" not in input_arguments:
         raise NameError("Argument '--min_length' should be defined")
+    else:
+        value_of_min_len = input_arguments[input_arguments.index("--min_length") + 1]
+        arguments["min_length"] = float(value_of_min_len)
 
-    if "--gc_bounds" not in arguments:
-        arguments["--gc_bounds"] = [0]  # GC content will be greater, than zero
 
-    if "--output_base_name" in arguments:
-        base_name = arguments["--output_base_name"][0]
+
+
+    if "--gc_bounds" not in input_arguments:
+        arguments["gc_bounds"] = [0]  # GC content will be greater, than zero
+    else:
+        arguments["gc_bounds"] = []
+        index_of_gc_value = input_arguments.index("--gc_bounds")
+
+        for gc_val_index in range(index_of_gc_value + 1, len(input_arguments)):
+            gc_value = input_arguments[gc_val_index]
+            if gc_value.startswith("--"):
+                break
+            else:
+                arguments["gc_bounds"].append(float(gc_value))
+
+
+
+    if "--output_base_name" in input_arguments:
+        index_of_base_name = input_arguments.index("--output_base_name") + 1
+        base_name = input_arguments[index_of_base_name]
     else:
         base_name = file_with_reads[:len(file_with_reads) - 6]
 
@@ -102,18 +136,18 @@ if __name__ == "__main__":
                 continue
             else:
                 read.append(smt.rstrip())
-                print("Processing read", read[0])
+                # print("Processing read", read[0])
 
-                if "--keep_filtered" in arguments:
+                if "--keep_filtered" in input_arguments:
                     with open(f"{base_name}__failed.fastq", "a") as output_failed:
-                        status = filter_the_reads(read, arguments["--min_length"][0], arguments["--gc_bounds"], failed=True)
+                        status = filter_the_reads(read, arguments["min_length"], arguments["gc_bounds"], failed=True)
 
                         if status == "passed":
                             counter_passed += 1
                         else:
                             counter_failed += 1
                 else:
-                    status = filter_the_reads(read, arguments["--min_length"][0], arguments["--gc_bounds"])
+                    status = filter_the_reads(read, arguments["min_length"], arguments["gc_bounds"])
 
                     if status == "passed":
                         counter_passed += 1
@@ -125,7 +159,7 @@ if __name__ == "__main__":
     end_time = time.time()
 
     print()
-    print("Running time", round(end_time - start_time, 3))
+    print("Running time", round(end_time - start_time, 3), "sec")
     print(f"{number_of_reads} reads filtered")
     print(f"{counter_passed} ({int(100 * counter_passed / number_of_reads)}%) pass filtration")
     print(f"{counter_failed} ({int(100 * counter_failed / number_of_reads)}%) fail filtration")
