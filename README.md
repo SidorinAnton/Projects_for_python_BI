@@ -1,2 +1,2 @@
 # Fastq_parser
-This is our project for Bioinformatic Institute in python course.
+This is our project for python course in Bioinformatic Institute.
