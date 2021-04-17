@@ -103,7 +103,23 @@ def get_arguments(input_args: List[str]) -> dict:
         exit()
 
     if "--help" in input_args:
-        # print(filter_the_reads.__doc__)
+        print(
+            """
+            Filter_fastq v1.0.0
+            Usage:
+                python3 filter_fastq.py [options] <input.fastq>
+            Available options:
+            --min_length <int> - minimal length of the sequence read to pass (Default = 0).
+            --keep_filtered - this flag should be set to save the not passed (failed the conditions) reads.
+            --gc_bounds <min> <max> - range of the GC bases percentage in a read. Use one value to specify only lower bound.
+                        Use two values to specify lower and upper bounds (Default = 0).
+            --output_base_name <str> - the basename of the output files (By default writes the base name of input
+                        without '.fastq')
+            Output files:
+                output_base_name__passed.fastq
+                output_base_name__failed.fastq (if 'keep_filtered' is defined)
+            """
+        )
         exit()
 
     dict_args = {
